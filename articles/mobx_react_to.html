@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>На что реагирует MobX?</title>
+  <!-- Compiled and minified CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+
+  <!-- Compiled and minified JavaScript -->
+
+
+  <link rel="stylesheet" href="../style/articles.css">
+</head>
+<body>
+<div class="container">
+  <h3 class="main_title">На что реагирует MobX?</h3>
+  <p>(перевод “What does MobX react to?” - <a href="https://mobx.js.org/best/react.html">https://mobx.js.org/best/react.html</a>)
+  </p>
+  <br/>
+  <p>
+    MobX обычно реагирует именно на то, что вы ожидаете. Это значит, что в 90% случаев использования mobx "просто
+    работает". Тем не менее, в какой-то момент вы столкнетесь со случаем, когда он может не выполнить то, что вы
+    ожидали.
+    В этот момент бесценно понимать, как MobX определяет, на что реагировать.
+  </p>
+  <blockquote class="orange lighten-5">MobX реагирует на любое имеющееся <b>наблюдаемое</b> <em>свойство</em>, которое
+    читается во время выполнения отслеживаемой функции.
+  </blockquote>
+  <ul class="browser-default">
+    <li><em>«Чтение»</em> - это разыменование свойства объекта, которое может быть выполнено с помощью его «точечной
+      нотации» (например, <code>user.name</code>) или с помощью «скобочной нотации» (например, <code>user
+        ['name']</code>).
+    </li>
+    <li><em>«Отслеживаемые функции»</em> - это выражения <code>computed</code>, метод
+      <code>render()</code>
+      компонента-наблюдателя и функции, которые передаются первым параметром в <code>when</code>, <code>reaction</code>
+      и <code>autorun</code>.
+    </li>
+    <li><em>«Во время»</em> означает, что отслеживаются только те наблюдаемые, которые читаются во время
+      выполнения функции. Не имеет значения, используются ли эти значения прямо или косвенно отслеживаемой функцией.
+    </li>
+  </ul>
+  <p>Другими словами, MobX не будет реагировать на:</p>
+  <ul class="browser-default">
+    <li>Значения, полученные из наблюдаемых, но за пределами отслеживаемой функции
+    </li>
+    <li>Наблюдаемые, которые читаются в асинхронно вызванном блоке кода</li>
+  </ul>
+  <h5>MobX отслеживает доступ к свойствам, а не к значениям</h5>
+  <p>Чтобы проиллюстрировать вышеприведенные правила на примере, предположим, что у вас есть следующая наблюдаемая
+    структура данных (<code>observable</code> применяется сам к себе рекурсивно по умолчанию, поэтому все поля в этом
+    примере
+    являются наблюдаемыми):</p>
+  <pre><code class="hljs css language-javascript"><span class="hljs-keyword">let</span> message = observable({
+      <span class="hljs-attr">title</span>: <span class="hljs-string">"Foo"</span>,
+      <span class="hljs-attr">author</span>: {
+        <span class="hljs-attr">name</span>: <span class="hljs-string">"Michel"</span>
+    },
+    <span class="hljs-attr">likes</span>: [<span class="hljs-string">"John"</span>, <span
+        class="hljs-string">"Sara"</span>]
+})
+</code></pre>
+  <p>
+    В памяти это выглядит следующим образом. Зеленые прямоугольники указывают на <em>наблюдаемые</em> свойства. Обратите
+    внимание,
+    что сами <em>значения</em> не наблюдаемы!
+  </p>
+  <p>
+    <img src="https://mobx.js.org/assets/observed-refs.png" alt="MobX reacts to changing references"/>
+  </p>
+  <p class="center-align">
+  <sup>Mobx наблюдает за ссылками. Любое наблюдаемое свойство (зеленое), которое разыменовано («через точку») в
+    отслеживаемой функции, будет зарегистрировано. Если такая ссылка будет изменена, Mobx среагирует.</sup>
+  </p>
+  <p>То что MobX в своей основе делает это записывает, какие стрелки вы используете в своей функции. После этого он будет перезапущен
+    всякий раз, когда одна из этих стрелок изменится; когда они начинают ссылаться на что-то еще.</p>
+
+  <h5>Примеры</h5>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+</body>
+</html>
