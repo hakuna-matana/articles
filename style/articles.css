@@ -41,6 +41,14 @@ img {
   color: #880000;
 }
 
+.hljs-built_in, .hljs-bullet, .hljs-code, .hljs-addition {
+  color: #397300;
+}
+
+.hljs-comment {
+  color: #888888;
+}
+
 pre code {
   background-color: transparent;
   border: 0;

@@ -16,8 +16,10 @@
 </head>
 <body>
 <div class="container">
+
+
   <h3 class="main_title">На что реагирует MobX?</h3>
-  <p>(перевод “What does MobX react to?” - <a href="https://mobx.js.org/best/react.html">https://mobx.js.org/best/react.html</a>)
+  <p>(любительский перевод “What does MobX react to?” - <a href="https://mobx.js.org/best/react.html">https://mobx.js.org/best/react.html</a>)
   </p>
   <br/>
   <p>
@@ -49,6 +51,8 @@
     </li>
     <li>Наблюдаемые, которые читаются в асинхронно вызванном блоке кода</li>
   </ul>
+
+
   <h5>MobX отслеживает доступ к свойствам, а не к значениям</h5>
   <p>Чтобы проиллюстрировать вышеприведенные правила на примере, предположим, что у вас есть следующая наблюдаемая
     структура данных (<code>observable</code> применяется сам к себе рекурсивно по умолчанию, поэтому все поля в этом
@@ -72,15 +76,202 @@
     <img src="https://mobx.js.org/assets/observed-refs.png" alt="MobX reacts to changing references"/>
   </p>
   <p class="center-align">
-  <sup>Mobx наблюдает за ссылками. Любое наблюдаемое свойство (зеленое), которое разыменовано («через точку») в
-    отслеживаемой функции, будет зарегистрировано. Если такая ссылка будет изменена, Mobx среагирует.</sup>
+    <sup>Mobx наблюдает за ссылками. Любое наблюдаемое свойство (зеленое), которое разыменовано («через точку») в
+      отслеживаемой функции, будет зарегистрировано. Если такая ссылка будет изменена, Mobx среагирует.</sup>
   </p>
-  <p>То что MobX в своей основе делает это записывает, какие стрелки вы используете в своей функции. После этого он будет перезапущен
+  <p>То что MobX в своей основе делает это записывает, какие стрелки вы используете в своей функции. После этого он
+    будет перезапущен
     всякий раз, когда одна из этих стрелок изменится; когда они начинают ссылаться на что-то еще.</p>
 
+
   <h5>Примеры</h5>
+  <p>Покажем это на группе примеров (на основе переменной <code>message</code>, определенной выше):</p>
+
+
+  <b>Правильно: разыменование внутри отслеживаемой функции</b>
+  <pre><code class="hljs css language-javascript">autorun(<span class="hljs-function"><span
+      class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-built_in">console</span>.log(message.title)
+})
+message.title = <span class="hljs-string">"Bar"</span>
+</code></pre>
+  <p>Здесь будет реакция как и ожидалась, свойство <code>.title</code> было разыменовано автозапуском и впоследствии
+    изменено, поэтому это изменение обнаружено.</p>
+  <p>Вы можете проверить, что MobX будет отслеживать, вызвав <code>trace()</code> внутри отслеживаемой функции. В случае
+    вышеупомянутой функции будет выведено следующее:</p>
+  <pre><code class="hljs css language-javascript"><span class="hljs-keyword">const</span> disposer = autorun(<span
+      class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-built_in">console</span>.log(message.title)
+    trace()
+})
+
+<span class="hljs-comment">// Outputs:</span>
+<span class="hljs-comment">// [mobx.trace] 'Autorun@2' tracing enabled</span>
+
+message.title = <span class="hljs-string">"Hello"</span>
+<span
+    class="hljs-comment">// [mobx.trace] 'Autorun@2' is invalidated due to a change in: 'ObservableObject@1.title'</span>
+</code></pre>
+  <p>Также есть возможность получить дерево внутренних зависимостей (или наблюдателя), используя для этого указанные
+    утилиты:</p>
+  <pre><code class="hljs css language-javascript">getDependencyTree(disposer) <span class="hljs-comment">// prints the dependency tree of the reaction coupled to the disposer</span>
+<span class="hljs-comment">// { name: 'Autorun@4',</span>
+<span class="hljs-comment">//  dependencies: [ { name: 'ObservableObject@1.title' } ] }</span>
+</code></pre>
+
+
+  <b>Неправильно: изменение ненаблюдаемой ссылки</b>
+  <pre><code class="hljs css language-javascript">autorun(<span class="hljs-function"><span
+      class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-built_in">console</span>.log(message.title)
+})
+message = observable({ <span class="hljs-attr">title</span>: <span class="hljs-string">"Bar"</span> })
+</code></pre>
+  <p>Здесь <b>не</b> будет реакции. <code>message</code> был изменен, но <code>message</code> не наблюдаемый. Просто
+    переменная, которая ссылается на наблюдаемую, но сама по себе переменная (ссылка) не является наблюдаемой.</p>
+
+
+  <b>Неправильно: разыменование вне отслеживаемой функции</b>
+  <pre><code class="hljs css language-javascript"><span class="hljs-keyword">var</span> title = message.title
+autorun(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-built_in">console</span>.log(title)
+})
+message.title = <span class="hljs-string">"Bar"</span>
+</code></pre>
+  <p>Здесь <b>не</b> будет реакции. <code>message.title</code> был разыменован вне <code>autorun</code> и просто
+    содержит значение <code>message.title</code> в момент разыменования (строка <code>«Foo»</code>). <code>title</code>
+    не наблюдаемый, поэтому <code>autorun</code> никогда не будет реагировать.</p>
+
+
+  <b>Правильно: разыменование внутри отслеживаемой функции</b>
+  <pre><code class="hljs css language-javascript">autorun(<span class="hljs-function"><span
+      class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-built_in">console</span>.log(message.author.name)
+})
+message.author.name = <span class="hljs-string">"Sara"</span>
+message.author = { <span class="hljs-attr">name</span>: <span class="hljs-string">"John"</span> }
+</code></pre>
+  <p>В этом примере будет реакция на оба изменения. И <code>author</code>, и <code>author.name</code> записаны через
+    точку, что позволяет MobX отслеживать эти ссылки.</p>
+
+
+  <b>Неправильно: хранить локальную ссылку на наблюдаемый объект без отслеживания</b>
+  <pre><code class="hljs css language-javascript"><span class="hljs-keyword">const</span> author = message.author
+autorun(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-built_in">console</span>.log(author.name)
+})
+message.author.name = <span class="hljs-string">"Sara"</span>
+message.author = { <span class="hljs-attr">name</span>: <span class="hljs-string">"John"</span> }
+</code></pre>
+  <p>Первое изменение будет поймано, <code>message.author</code> и <code>author</code> - это один и тот же объект, а
+    свойство <code>.name</code> разыменовывается в автозапуске. Однако второе изменение не будет поймано, <code>message.author</code>
+    не отслеживается <code>autorun</code>. Автозапуск до сих пор использует "старый" <code>author</code>.</p>
+
+
+  <b>Общая ловушка: console.log</b>
+  <pre><code class="hljs css language-javascript"><span class="hljs-keyword">const</span> message = observable({ <span
+      class="hljs-attr">title</span>: <span class="hljs-string">"hello"</span> })
+
+autorun(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-built_in">console</span>.log(message)
+})
+
+<span class="hljs-comment">// Won't trigger a re-run</span>
+message.title = <span class="hljs-string">"Hello world"</span>
+</code></pre>
+  <p>В приведенном выше примере обновленный заголовок сообщения не будет напечатан, поскольку он не используется внутри
+    автозапуска. Автозапуск зависит только от <code>message</code>, которое не является наблюдаемым, а является
+    константой. Другими словами, что касается MobX, <code>title</code> не используется в, и, следовательно, не значим
+    для <code>autorun</code>.
+  </p>
+
+  <p>Тот факт, что <code>console.log</code> будет печатать заголовок сообщения, вводит в заблуждение;
+    <code>console.log</code> - это асинхронный
+    API-интерфейс, который просто отформатирует свои параметры позднее, по этой причине автозапуск не будет отслеживать
+    данные, к которым обращается <code>console.log</code>. По этой причине всегда передавайте неизменные данные или
+    защитные копии в
+    <code>console.log</code>.</p>
+
+  <p>Однако, во всех следующих решениях будет реакция на <code>message.title</code>:
+  </p>
+  <pre><code class="hljs css language-javascript">autorun(<span class="hljs-function"><span
+      class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-built_in">console</span>.log(message.title) <span class="hljs-comment">// ясно, что наблюдаемый `.title` используется</span>
+})
+
+autorun(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-built_in">console</span>.log(mobx.toJS(message)) <span class="hljs-comment">// toJS создает глубокий клон, и, таким образом, будет читать сообщение</span>
+})
+
+autorun(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-built_in">console</span>.log({ ...message }) <span class="hljs-comment">// создает неглубокий клон, также используя в процессе `.title`</span>
+})
+
+autorun(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-built_in">JSON</span>.stringify(message)) <span
+        class="hljs-comment">// также читает всю структуру</span>
+})
+</code></pre>
+
+
+  <b>Правильно: доступ к свойствам массива в отслеживаемой функции</b>
+  <pre><code class="hljs css language-javascript">autorun(<span class="hljs-function"><span
+      class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-built_in">console</span>.log(message.likes.length)
+})
+message.likes.push(<span class="hljs-string">"Jennifer"</span>)
+</code></pre>
+  <p>Здесь будет реакция как и ожидалась. <code>.length</code> считается свойством. Обратите внимание, что здесь будет
+    реакция на любые изменения в массиве. Массивы отслеживаются не по индексу/свойству (как наблюдаемые объекты и
+    map-ы), а в целом.</p>
+
+
+  <b>Неправильно: доступ к индексам вне границ в отслеживаемой функции</b>
+  <pre><code class="hljs css language-javascript">autorun(<span class="hljs-function"><span
+      class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-built_in">console</span>.log(message.likes[<span class="hljs-number">0</span>])
+})
+message.likes.push(<span class="hljs-string">"Jennifer"</span>)
+</code></pre>
+  <p>Здесь будет реакция с приведенными выше данными, индексы массива считаются доступом к свойству. Но только при
+    условии <code>index < length</code>. MobX не будет отслеживать еще не существующие индексы или свойства объекта
+    (кроме случаев использования maps). Поэтому всегда защищайте доступ к индексу массива с помощью проверки длины.</p>
+
+
+  <b>Правильно: доступ к функциям массива в отслеживаемой функции</b>
+  <pre><code class="hljs css language-javascript">autorun(<span class="hljs-function"><span
+      class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-built_in">console</span>.log(message.likes.join(<span class="hljs-string">", "</span>))
+})
+message.likes.push(<span class="hljs-string">"Jennifer"</span>)
+</code></pre>
+  <p>Здесь будет реакция как ожидалось. Все функции массива, которые не изменяют массив, отслеживаются
+    автоматически.</p>
+  <pre><code class="hljs css language-javascript">autorun(<span class="hljs-function"><span
+      class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-built_in">console</span>.log(message.likes.join(<span class="hljs-string">", "</span>))
+})
+message.likes[<span class="hljs-number">2</span>] = <span class="hljs-string">"Jennifer"</span>
+</code></pre>
+  <p>Здесь будет реакция как ожидалось. Все присваивания по индексу массива обнаруживаются, но только если <code>index
+    <= length</code>.</p>
+
+
+  <b>Неправильно: «использовать» наблюдаемое, но без доступа к любому из его свойств</b>
+  <pre><code class="hljs css language-javascript">autorun(<span class="hljs-function"><span
+      class="hljs-params">()</span> =&gt;</span> {
+    message.likes
+})
+message.likes.push(<span class="hljs-string">"Jennifer"</span>)
+</code></pre>
+  <p>Здесь <b>не</b> будет реакции. Просто потому, что сам массив <code>likes</code> не используется
+    <code>autorun</code>, только ссылка на массив. Поэтому, наоборот, <code>messages.likes = ["Jennifer"]</code> было бы
+    поймано; это выражение не изменяет массив, но изменяет само свойство <code>likes</code>.</p>
+
+
 </div>
 
+<br/><br/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
 </body>
 </html>
